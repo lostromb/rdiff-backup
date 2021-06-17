@@ -47,6 +47,11 @@ class RemoveAction(actions.BaseAction):
             help="location of repository to remove increments from")
         return subparser
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        ret_code = super().__exit__(exc_type, exc_val, exc_tb)
+        self.source.exit()
+        return ret_code
+
     def connect(self):
         conn_value = super().connect()
         if conn_value:

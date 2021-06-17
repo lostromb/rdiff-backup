@@ -22,6 +22,10 @@ A location module to define repository classes as created by rdiff-backup
 """
 
 import io
+import os
+import socket
+import sys
+import time
 
 from rdiffbackup import locations
 
@@ -33,6 +37,7 @@ from rdiff_backup import (
     rpath,
     Security,
     SetConnections,
+    Time
 )
 
 
@@ -70,6 +75,7 @@ class Repo(locations.Location):
         self.can_be_sub_path = can_be_sub_path
         self.data_dir = self.base_dir.append_path(b"rdiff-backup-data")
         self.incs_dir = self.data_dir.append_path(b"increments")
+        self.lock = self.data_dir.append(".lock")
 
     def check(self):
         if self.can_be_sub_path and self.restore_type is None:
@@ -86,6 +92,9 @@ class Repo(locations.Location):
         if self.must_be_writable and not self._is_writable():
             ret_code |= 1
 
+        if self._is_locked():
+            ret_code |= 1
+
         return ret_code
 
     def setup(self):
@@ -98,7 +107,17 @@ class Repo(locations.Location):
 
         SetConnections.UpdateGlobal('rbdir', self.data_dir)  # compat200
 
+        if self.must_be_writable and not self._lock():
+            return 1
+
         return 0  # all is good
+
+    def exit(self):
+        """
+        Close the repository, mainly unlock it if it's writable
+        """
+        if self.must_be_writable:
+            self._unlock()
 
     def get_mirror_time(self):
         """
@@ -153,7 +172,7 @@ class Repo(locations.Location):
             # check if we can find any file of importance
             if filename not in [
                     b'chars_to_quote', b'special_escapes',
-                    b'backup.log', b'increments'
+                    b'backup.log', b'increments', b'.lock'
             ]:
                 break
         else:  # This may happen the first backup just after we test for quoting
@@ -266,6 +285,79 @@ information in it.
                             tp=self.base_dir), log.ERROR)
                 return False
         return True
+
+    def _is_locked(self, remove=False):
+        """
+        Validate if the repository is locked or not by the file
+        'rdiff-backup-data/.lock'
+
+        Returns True if the file exists, else returns False
+        """
+        # we need to make sure we have the last state of the lock
+        self.lock.setdata()
+        if self.lock.lstat():
+            if self.force:
+                log.Log("Repository is locked but forcing action nevertheless",
+                        log.WARNING)
+                if remove:
+                    self.lock.delete()
+                return False
+            else:
+                log.Log("Repository is locked by file {lf}, another "
+                        "action is probably on-going. Either wait, remove "
+                        "the lock or use the --force option".format(
+                            lf=self.lock), log.ERROR)
+                return True
+
+    def _lock(self):
+        """
+        Write a specific file 'rdiff-backup-data/.lock' to grab the lock,
+        and verify that no other process took the lock by comparing its
+        content.
+
+        Return True if the lock could be taken, False else.
+        """
+        fqdn = socket.getfqdn()
+        currtime = Time.curtimestr
+        pid = os.getpid()
+        cmd = sys.argv[0]
+        identifier = "{} {} {} {}".format(fqdn, currtime, pid, cmd)
+        if self._is_locked(remove=True):
+            return False
+        else:
+            try:
+                self.lock.write_string(identifier)
+                time.sleep(0.1)  # in case another concurring process runs
+                read_back = self.lock.get_string()
+            except AssertionError:
+                return False
+            except OSError as exc:
+                log.Log("Couldn't create lock file '{lf}' due to "
+                        "exception '{ex}'".format(lf=self.lock, ex=exc),
+                        log.ERROR)
+                return False
+        # we now compare strings to make sure no other process "stole" the lock
+        if read_back == identifier:
+            return True
+        else:
+            log.Log("Lock was stolen by other process {op}".format(
+                op=read_back), log.ERROR)
+            return False
+
+    def _unlock(self):
+        """
+        Remove any lock existing.
+
+        We don't check for any content because we have the lock and should be
+        the only process running on this repository.
+        """
+        self.lock.setdata()
+        if self.lock.lstat():
+            self.lock.delete()
+        else:
+            log.Log("Something is strange, the lock file '{lf}' was created"
+                    "but it doesn't exist at removal time".format(
+                        lf=self.lock), log.WARNING)
 
     def _create(self):
         # create the underlying location/directory
