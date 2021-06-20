@@ -56,9 +56,8 @@ class BackupAction(actions.BaseAction):
         return subparser
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        ret_code = super().__exit__(exc_type, exc_val, exc_tb)
         self.target.exit()
-        return ret_code
+        return super().__exit__(exc_type, exc_val, exc_tb)
 
     def connect(self):
         conn_value = super().connect()

@@ -355,7 +355,7 @@ information in it.
         if self.lock.lstat():
             self.lock.delete()
         else:
-            log.Log("Something is strange, the lock file '{lf}' was created"
+            log.Log("Something is strange, the lock file '{lf}' was created "
                     "but it doesn't exist at removal time".format(
                         lf=self.lock), log.WARNING)
 
