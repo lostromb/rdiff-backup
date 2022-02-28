@@ -205,15 +205,6 @@ class BackupAction(actions.BaseAction):
         if rpout.path[:len(rpin.path) + 1] != rpin.path + b'/':
             return
 
-        # relative_rpout_comps = tuple(
-        #     rpout.path[len(rpin.path) + 1:].split(b'/'))
-        # relative_rpout = rpin.new_index(relative_rpout_comps)
-        # FIXME: this fails currently because the selection object isn't stored
-        #        but an iterable, the object not being pickable.
-        #        Related to issue #296
-        # if not Globals.select_mirror.Select(relative_rpout):
-        #     return
-
         log.Log("The target directory '{td}' may be contained in the "
                 "source directory '{sd}'. "
                 "This could cause an infinite recursion. "

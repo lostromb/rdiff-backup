@@ -159,7 +159,7 @@ class RepoShadow:
             """Get the combined iterator from the filesystem"""
             sel = selection.Select(rpath)
             sel.parse_rbdir_exclude()
-            return sel.set_iter()
+            return sel.get_select_iter()
 
         meta_manager = meta_mgr.get_meta_manager(True)
         if previous_time:  # it's an increment, not the first mirror

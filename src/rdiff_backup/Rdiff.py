@@ -18,7 +18,7 @@
 # 02110-1301, USA
 """Invoke rdiff utility to make signatures, deltas, or patch"""
 
-from . import Globals, log, rpath, hash, librsync
+from rdiff_backup import Globals, log, rpath, hash, librsync
 
 
 def get_signature(rp, blocksize=None):
@@ -79,17 +79,19 @@ def patch_local(rp_basis, rp_delta, outrp=None, delta_compressed=None):
 
 
 def _find_blocksize(file_len):
-    """Return a reasonable block size to use on files of length file_len
+    """
+    Return a reasonable block size to use on files of length file_len
 
     If the block size is too big, deltas will be bigger than is
     necessary.  If the block size is too small, making deltas and
     patching can take a really long time.
-
     """
-    if file_len < 4096:
+    if file_len < 10240:
         return 64  # set minimum of 64 bytes
-    else:  # Use square root, rounding to nearest 16
-        return int(pow(file_len, 0.5) / 16) * 16
+    else:
+        # Use square root, rounding to nearest 16
+        # somewhat faster than int(pow(file_len, 0.5) / 16) * 16
+        return (file_len >> (file_len.bit_length() // 2 + 4)) << 4
 
 
 def _write_via_tempfile(fp, rp):

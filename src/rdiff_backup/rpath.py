@@ -386,10 +386,10 @@ class RORPath:
         assert file and not self.file, "Can't assign twice a file."
 
         def closing_hook():
-            self.file_already_open = None
+            self._file_already_open = False
 
         self.file = _RPathFileHook(file, closing_hook)
-        self.file_already_open = None
+        self._file_already_open = False
 
     def get_safeindex(self):
         """Return index as a tuple of strings with safe decoding
@@ -442,9 +442,9 @@ class RORPath:
         """Return file type object if any was given using self.setfile"""
         if mode != "rb":
             raise RPathException("Bad mode %s" % mode)
-        if self.file_already_open:
+        if self._file_already_open:
             raise RPathException("Attempt to open same file twice")
-        self.file_already_open = 1
+        self._file_already_open = True
         return self.file
 
     def close_if_necessary(self):
@@ -453,7 +453,7 @@ class RORPath:
             while self.file.read(Globals.blocksize):
                 pass
             self.file.close()
-            self.file_already_open = None
+            self._file_already_open = False
 
     def set_acl(self, acl_meta):
         """Record access control list in dictionary.  Does not write"""

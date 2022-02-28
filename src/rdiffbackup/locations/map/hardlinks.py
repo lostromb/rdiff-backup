@@ -90,7 +90,7 @@ def rorp_eq(src_rorp, dest_rorp):
     """
     if (not src_rorp.isreg() or not dest_rorp.isreg()
             or src_rorp.getnumlinks() == dest_rorp.getnumlinks() == 1):
-        return 1  # Hard links don't apply
+        return True  # Hard links don't apply
 
     # The sha1 of linked files is only stored in the metadata of the first
     # linked file on the dest side.  If the first linked file on the src side
@@ -98,20 +98,21 @@ def rorp_eq(src_rorp, dest_rorp):
     # test for this & report not equal so that another sha1 will be stored
     # with the next linked file on the dest side
     if (not is_linked(src_rorp) and not dest_rorp.has_sha1()):
-        return 0
+        return False
     if src_rorp.getnumlinks() != dest_rorp.getnumlinks():
-        return 0
+        return False
     src_key = _get_inode_key(src_rorp)
     index, remaining, dest_key, digest = _inode_index[src_key]
     if dest_key == "NA":
         # Allow this to be ok for first comparison, but not any
         # subsequent ones
         _inode_index[src_key] = (index, remaining, None, None)
-        return 1
+        return True
     try:
         return dest_key == _get_inode_key(dest_rorp)
     except KeyError:
-        return 0  # Inode key might be missing if the metadata file is corrupt
+        # Inode key might be missing if the metadata file is corrupt
+        return False
 
 
 def is_linked(rorp):
@@ -119,10 +120,10 @@ def is_linked(rorp):
     True if rorp's index is already linked to something on src side
     """
     if not rorp.getnumlinks() > 1:
-        return 0
+        return False
     dict_val = _inode_index.get(_get_inode_key(rorp))
     if not dict_val:
-        return 0
+        return False
     return dict_val[0] != rorp.index  # If equal, then rorp is first
 
 

@@ -57,10 +57,9 @@ class ReadDirShadow:
         """
         sel = selection.Select(rp)
         sel.parse_selection_args(tuplelist, filelists)
-        sel_iter = sel.set_iter()
+        sel_iter = sel.get_select_iter()
         cache_size = Globals.pipeline_max_length * 3  # to and from+leeway
         cls._select = rorpiter.CacheIndexable(sel_iter, cache_size)
-        Globals.set('select_mirror', sel_iter)
 
     # @API(ReadDirShadow.get_select, 201)
     @classmethod
@@ -280,9 +279,9 @@ class WriteDirShadow:
     def get_initial_iter(cls, target):
         """Return selector previously set with set_initial_iter"""
         if cls._select:
-            return cls._select.set_iter()
+            return cls._select.get_select_iter()
         else:
-            return selection.Select(target).set_iter()
+            return selection.Select(target).get_select_iter()
 
     # @API(WriteDirShadow.patch, 201)
     @classmethod

@@ -327,12 +327,12 @@ def CollateIterators(*rorp_iters):
 
 
 def Collate2Iters(riter1, riter2):
-    """Special case of CollateIterators with 2 arguments
+    """
+    Special case of CollateIterators with 2 arguments
 
     This does the same thing but is faster because it doesn't have
     to consider the >2 iterator case.  Profiler says speed is
     important here.
-
     """
     relem1, relem2 = None, None
     while 1:
